@@ -314,17 +314,22 @@
       margin-top:0;
     }
 
-    /* iPad横向き想定：上部の余白・カード高さを圧縮 */
-    @media (max-width: 1100px){
-      .wrap{ padding:12px; }
-      .panel{ padding:12px; }
-      .dashCard{ min-height:96px; }
-      .controls{
-        grid-template-columns: 1fr 1fr;
-      }
-      .ctl.actions{ grid-column: 1 / -1; }
-      .ctl.status{ grid-column: 1 / -1; }
-    }
+/* iPad横向き想定：上部の余白・カード高さを圧縮 */
+@media (max-width: 1100px){
+  .wrap{ padding:12px; }
+  .panel{ padding:12px; }
+  .dashCard{ min-height:96px; }
+
+  /* ★ここが修正点：2列をやめて「一列」固定にする */
+  .controls{
+    grid-template-columns: 1fr;
+  }
+
+  /* 既存の指定は残してOK（1列でも害なし） */
+  .ctl.actions{ grid-column: 1 / -1; }
+  .ctl.status{ grid-column: 1 / -1; }
+}
+
 
     /* iPad縦/スマホは縦積み */
     @media (max-width: 720px){
