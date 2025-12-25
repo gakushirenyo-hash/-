@@ -320,14 +320,22 @@
   .panel{ padding:12px; }
   .dashCard{ min-height:96px; }
 
-  /* ★ここが修正点：2列をやめて「一列」固定にする */
+  /* ★ 修正点：gridをやめて横一列にする */
   .controls{
-    grid-template-columns: 1fr;
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    align-items:flex-end;
   }
 
-  /* 既存の指定は残してOK（1列でも害なし） */
-  .ctl.actions{ grid-column: 1 / -1; }
-  .ctl.status{ grid-column: 1 / -1; }
+  .controls > .ctl{
+    flex: 0 0 auto;
+  }
+
+  /* メッセージだけは下に落とす */
+  #msg{
+    flex: 1 1 100%;
+  }
 }
 
 
