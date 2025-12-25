@@ -323,20 +323,26 @@
   /* ★ 修正点：gridをやめて横一列にする */
   .controls{
     display:flex;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;              /* 折り返さない */
     gap:10px;
     align-items:flex-end;
+    overflow-x:auto;               /* 入り切らない時は横スクロール */
+    -webkit-overflow-scrolling:touch;
   }
 
   .controls > .ctl{
     flex: 0 0 auto;
   }
 
-  /* メッセージだけは下に落とす */
+  /* msg も同じ行に固定（伸び縮み＆省略表示） */
   #msg{
-    flex: 1 1 100%;
+    flex: 1 1 auto;
+    margin-top:0;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    min-width:260px;
   }
-}
 
 
     /* iPad縦/スマホは縦積み */
