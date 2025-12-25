@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>ページ進捗グリッド（4作品ダッシュボード）</title>
+  <style>
+    :root{
+      --bg:#0f1220;
+      --panel:#171a2b;
+      --text:#e9ecff;
+      --muted:#aab0d6;
+      --line:#2a2f52;
+      --focus:#7aa2ff;
+      --danger:#ff6b6b;
+
+      /* 未着手：目立たせないニュートラル */
+      --c0:hsl(220 18% 28%); /* 未着手 */
+
+      /* 押すたびにこの順番で色が進む */
+      --c1:hsl(215 45% 48%); /* 青 */
+      --c2:hsl(195 42% 46%); /* 青緑 */
+      --c3:hsl(165 40% 44%); /* 緑 */
+      --c4:hsl(95  40% 48%); /* 黄緑 */
+      --c5:hsl(55  45% 52%); /* 黄 */
+      --c6:hsl(30  50% 54%); /* 橙 */
+      --c7:hsl(0   55% 56%); /* 赤（完成：一番明るい） */
+      --c8:hsl(285 45% 54%); /* 紫 */
+
+
+
+    }
+    *{ box-sizing:border-box; }
+    body{
+      margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
+      background: radial-gradient(1200px 800px at 20% 10%, #1c2150 0%, var(--bg) 55%);
+      color:var(--text);
+    }
+    .wrap{ max-width:1220px; margin:0 auto; padding:18px; }
+    h1{ font-size:18px; margin:6px 0 14px; font-weight:700; }
+
+    .panel{
+      background: rgba(23,26,43,.92);
+      border:1px solid var(--line);
+      border-radius:14px;
+      padding:14px;
+      box-shadow: 0 8px 30px rgba(0,0,0,.25);
+    }
+
+    .row{ display:flex; flex-wrap:wrap; gap:10px; align-items:flex-end; }
+    label{ color:var(--muted); font-size:12px; }
+    input[type="number"], input[type="text"], select{
+      background:#0f1330;
+      border:1px solid var(--line);
+      color:var(--text);
+      border-radius:10px;
+      padding:10px 12px;
+      outline:none;
+      min-width:160px;
+    }
+    input:focus, select:focus{
+      border-color: var(--focus);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.25);
+    }
+    button{
+      background:#2a3270;
+      border:1px solid #3b46a6;
+      color:var(--text);
+      padding:10px 12px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+    }
+    button:hover{ filter:brightness(1.08); }
+    button.secondary{
+      background:#10143a;
+      border:1px solid var(--line);
+      color:var(--muted);
+      font-weight:600;
+    }
+    button.danger{
+      background: rgba(255,107,107,.15);
+      border:1px solid rgba(255,107,107,.55);
+      color:#ffd7d7;
+    }
+
+    .msg{
+      margin-top:10px;
+      padding:10px 12px;
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:#0f1330;
+      color:var(--muted);
+      font-size:12px;
+      line-height:1.6;
+      white-space:pre-wrap;
+    }
+
+    /* --- Dashboard --- */
+    .dash{
+      display:grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap:10px;
+      margin-bottom:12px;
+    }
+    .dashCard{
+      border:1px solid var(--line);
+      border-radius:14px;
+      background: rgba(15,19,48,.85);
+      padding:12px;
+      cursor:pointer;
+      user-select:none;
+      transition: transform .05s ease, filter .15s ease, border-color .15s ease, box-shadow .15s ease;
+      position:relative;
+      overflow:hidden;
+      min-height:108px;
+    }
+    .dashCard:hover{ filter:brightness(1.08); }
+    .dashCard:active{ transform: translateY(1px); }
+    .dashCard.active{
+      border-color: rgba(122,162,255,.8);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+    }
+    .dashTop{
+      display:flex; align-items:center; justify-content:space-between; gap:8px;
+      margin-bottom:8px;
+    }
+    .dashTitle{
+      font-weight:900;
+      font-size:13px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      max-width: 78%;
+    }
+    .badge{
+      font-size:11px;
+      color: rgba(233,236,255,.92);
+      border:1px solid var(--line);
+      background: rgba(16,20,58,.55);
+      padding:4px 8px;
+      border-radius:999px;
+      flex: 0 0 auto;
+    }
+    .bar{
+      height:10px;
+      border-radius:999px;
+      background: rgba(43,49,87,.9);
+      border:1px solid rgba(42,47,82,.85);
+      overflow:hidden;
+      margin-bottom:8px;
+    }
+    .bar > div{
+      height:100%;
+      width:0%;
+      background: var(--c7);
+      transition: width .2s ease;
+    }
+    .dashNums{
+      display:flex; flex-wrap:wrap; gap:8px;
+      font-size:12px; color:var(--muted);
+      margin-bottom:8px;
+    }
+    .mini{
+      display:flex; align-items:center; gap:6px;
+      border:1px solid var(--line);
+      background: rgba(16,20,58,.35);
+      padding:4px 8px;
+      border-radius:999px;
+    }
+    .dot{ width:10px; height:10px; border-radius:999px; border:1px solid rgba(42,47,82,.8); }
+    .stageLine{
+      margin-top:6px;
+      display:flex; flex-wrap:wrap; gap:6px;
+      color: rgba(233,236,255,.78);
+      font-size:11px;
+    }
+    .stageChip{
+      display:flex; align-items:center; gap:6px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(42,47,82,.85);
+      background: rgba(15,19,48,.65);
+      max-width:100%;
+      white-space:nowrap;
+    }
+    .stageChip span.txt{
+      overflow:hidden; text-overflow:ellipsis; max-width: 120px;
+    }
+
+    details{
+      margin-top:12px;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#0f1330;
+      padding:10px 12px;
+    }
+    summary{
+      cursor:pointer;
+      color:var(--text);
+      font-weight:900;
+      list-style:none;
+    }
+    summary::-webkit-details-marker{ display:none; }
+    .cfg{
+      margin-top:10px;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap:10px;
+    }
+    .cfg .box{
+      border:1px solid var(--line);
+      border-radius:12px;
+      padding:10px;
+      background: rgba(16,20,58,.55);
+    }
+    .cfg .box input{ width:100%; min-width:unset; }
+    .cfgActions{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+
+    .stats{ margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; color:var(--muted); font-size:12px; }
+    .pill{ background:#0f1330; border:1px solid var(--line); border-radius:999px; padding:6px 10px; display:flex; align-items:center; gap:8px; }
+
+    .legend{ margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; }
+    .legend .item{
+      display:flex; align-items:center; gap:8px;
+      background:#0f1330; border:1px solid var(--line); border-radius:999px;
+      padding:6px 10px; font-size:12px; color:var(--muted);
+      cursor:pointer; user-select:none;
+    }
+    .legend .item.active{
+      border-color: rgba(122,162,255,.7);
+      box-shadow: 0 0 0 3px rgba(122,162,255,.18);
+      color:var(--text);
+    }
+
+    .grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns: repeat(var(--cols, 12), minmax(34px, 1fr));
+      gap:8px;
+    }
+    .cell{
+      user-select:none;
+      border-radius:10px;
+      border:1px solid var(--line);
+      padding:10px 6px 22px;
+      text-align:center;
+      font-weight:900;
+      cursor:pointer;
+      position:relative;
+      background: var(--c0);
+      transition: transform .05s ease, filter .15s ease, background .2s ease;
+    }
+    .cell:hover{ filter:brightness(1.08); }
+    .cell:active{ transform: translateY(1px); }
+    .cell .sub{ position:absolute; left:8px; top:6px; font-size:10px; color:rgba(233,236,255,.75); font-weight:800; }
+    .cell .stage{
+      position:absolute; left:8px; right:8px; bottom:6px;
+      font-size:10px; font-weight:800; color:rgba(233,236,255,.9);
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      text-align:left;
+    }
+
+    .footer{ margin-top:12px; color:var(--muted); font-size:12px; line-height:1.7; }
+
+    @media (max-width: 980px){
+      .dash{ grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 560px){
+      .dash{ grid-template-columns: 1fr; }
+    }
+    @media (max-width: 720px){
+      .grid{ grid-template-columns: repeat(var(--cols, 8), minmax(34px, 1fr)); }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>ページ進捗グリッド（4作品ダッシュボード）</h1>
+
+    <div class="panel">
+
+      <!-- Dashboard -->
+      <div class="dash" id="dash"></div>
+
+      <div class="row">
+        <div>
+          <label>作品セレクタ（ワンクリック切替）</label><br>
+          <select id="projectSelect"></select>
+        </div>
+
+        <div>
+          <label>作品名（保存用キー）</label><br>
+          <input id="projectKey" type="text" placeholder="例：タケル第12話" />
+        </div>
+
+        <div>
+          <label>ページ数</label><br>
+          <input id="totalPages" type="number" min="1" max="5000" step="1" placeholder="例：32" />
+        </div>
+
+        <div>
+          <label>列数（見た目）</label><br>
+          <input id="cols" type="number" min="4" max="30" step="1" value="12" />
+        </div>
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+          <button id="buildBtn">作成/更新</button>
+          <button class="secondary" id="setStageBtn">選択工程に一括</button>
+          <button class="secondary" id="clearBtn">全て未着手</button>
+          <button class="danger" id="resetBtn">リセット</button>
+        </div>
+      </div>
+
+      <div class="msg" id="msg">準備中…（ページ数を入れて「作成/更新」を押してください）</div>
+
+      <details>
+        <summary>4作品の登録名を編集（初回だけ設定）</summary>
+        <div class="cfg" id="cfgGrid"></div>
+        <div class="cfgActions">
+          <button class="secondary" id="saveProjectsBtn">登録名を保存</button>
+          <button class="secondary" id="resetProjectsBtn" title="登録名だけ初期化（進捗は消えません）">登録名を初期化</button>
+        </div>
+        <div class="msg" id="cfgMsg">※ここで設定した4作品がダッシュボード/プルダウンに出ます。</div>
+      </details>
+
+      <div class="stats" id="stats"></div>
+      <div class="legend" id="legend"></div>
+      <div class="grid" id="grid"></div>
+
+      <div class="footer">
+        ・上の4枚カードがダッシュボードです。クリックでその作品に切り替わります。<br>
+        ・クリックで次工程へ。<b>Shift+クリック</b>で戻る（右クリックでも進む）。<br>
+        ・保存はブラウザ内（localStorage）です。
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const els = {
+        dash: document.getElementById('dash'),
+        projectSelect: document.getElementById('projectSelect'),
+        projectKey: document.getElementById('projectKey'),
+        totalPages: document.getElementById('totalPages'),
+        cols: document.getElementById('cols'),
+        buildBtn: document.getElementById('buildBtn'),
+        setStageBtn: document.getElementById('setStageBtn'),
+        clearBtn: document.getElementById('clearBtn'),
+        resetBtn: document.getElementById('resetBtn'),
+        grid: document.getElementById('grid'),
+        stats: document.getElementById('stats'),
+        legend: document.getElementById('legend'),
+        msg: document.getElementById('msg'),
+
+        cfgGrid: document.getElementById('cfgGrid'),
+        cfgMsg: document.getElementById('cfgMsg'),
+        saveProjectsBtn: document.getElementById('saveProjectsBtn'),
+        resetProjectsBtn: document.getElementById('resetProjectsBtn'),
+      };
+
+      const STORAGE_PREFIX = 'pageGridProgressStages::';
+      const PROJECTS_KEY = 'pageGridProjects::list_v1';
+
+      const STAGES = [
+        { id: 0, name: '未着手', cssVar: '--c0' },
+        { id: 1, name: '下書き', cssVar: '--c1' },
+        { id: 2, name: 'キャラペン入れ', cssVar: '--c2' },
+        { id: 3, name: 'キャラ仕上げ', cssVar: '--c3' },
+        { id: 4, name: '背景', cssVar: '--c4' },
+        { id: 5, name: 'アシスタント', cssVar: '--c5' },
+        { id: 6, name: '全体仕上げ', cssVar: '--c6' },
+        { id: 7, name: '完成', cssVar: '--c7' },
+        { id: 8, name: '修正', cssVar: '--c8' },
+      ];
+
+      let selectedStageId = 7;
+
+      function say(t){ els.msg.textContent = t; }
+      function cfgSay(t){ els.cfgMsg.textContent = t; }
+
+      function clampStage(n){
+        const max = STAGES.length - 1;
+        n = Number(n);
+        if (!Number.isFinite(n)) return 0;
+        n = n | 0;
+        if (n < 0) return 0;
+        if (n > max) return max;
+        return n;
+      }
+
+      function stageInfo(id){
+        return STAGES.find(s => s.id === id) || STAGES[0];
+      }
+
+      // ----- Projects -----
+      const DEFAULT_PROJECTS = ['作品A','作品B','作品C','作品D'];
+
+      function loadProjects(){
+        try{
+          const raw = localStorage.getItem(PROJECTS_KEY);
+          if (!raw) return DEFAULT_PROJECTS.slice();
+          const arr = JSON.parse(raw);
+          if (!Array.isArray(arr)) return DEFAULT_PROJECTS.slice();
+          const fixed = arr.slice(0,4).map((v,i)=> (String(v||'').trim() || DEFAULT_PROJECTS[i]));
+          while (fixed.length < 4) fixed.push(DEFAULT_PROJECTS[fixed.length]);
+          return fixed;
+        }catch{
+          return DEFAULT_PROJECTS.slice();
+        }
+      }
+      function saveProjects(arr){
+        const fixed = arr.slice(0,4).map((v,i)=> (String(v||'').trim() || DEFAULT_PROJECTS[i]));
+        localStorage.setItem(PROJECTS_KEY, JSON.stringify(fixed));
+        return fixed;
+      }
+      function rebuildProjectSelect(projects, keepValue){
+        const current = keepValue ?? els.projectSelect.value;
+        els.projectSelect.innerHTML = '';
+        projects.forEach((name, idx)=>{
+          const opt = document.createElement('option');
+          opt.value = name;
+          opt.textContent = `${idx+1}. ${name}`;
+          els.projectSelect.appendChild(opt);
+        });
+        const found = projects.includes(current) ? current : projects[0];
+        els.projectSelect.value = found;
+        els.projectKey.value = found;
+      }
+      function rebuildProjectConfigUI(projects){
+        els.cfgGrid.innerHTML = '';
+        projects.forEach((name, idx)=>{
+          const box = document.createElement('div');
+          box.className = 'box';
+          box.innerHTML = `
+            <label>枠${idx+1}</label><br>
+            <input type="text" data-proj-idx="${idx}" value="${escapeHtml(name)}" />
+          `;
+          els.cfgGrid.appendChild(box);
+        });
+      }
+      function escapeHtml(s){
+        return String(s)
+          .replaceAll('&','&amp;')
+          .replaceAll('<','&lt;')
+          .replaceAll('>','&gt;')
+          .replaceAll('"','&quot;')
+          .replaceAll("'","&#39;");
+      }
+
+      // ----- State -----
+      function keyNameFor(projectName){
+        const k = (projectName || '').trim();
+        return STORAGE_PREFIX + (k ? k : 'default');
+      }
+      function keyName(){
+        return keyNameFor(els.projectKey.value);
+      }
+      function loadStateFor(projectName){
+        try{
+          const raw = localStorage.getItem(keyNameFor(projectName));
+          if (!raw) return null;
+          return JSON.parse(raw);
+        }catch{
+          return null;
+        }
+      }
+      function loadState(){
+        try{
+          const raw = localStorage.getItem(keyName());
+          if (!raw) return null;
+          return JSON.parse(raw);
+        }catch(e){
+          say('保存データの読み込みに失敗しました。\n' + e);
+          return null;
+        }
+      }
+      function saveState(state){
+        try{
+          localStorage.setItem(keyName(), JSON.stringify(state));
+        }catch(e){
+          say('保存に失敗しました（ブラウザ設定や容量の可能性）。\n' + e);
+        }
+      }
+
+      function setGridCols(){
+        const cols = parseInt(els.cols.value, 10) || 12;
+        const c = Math.max(4, Math.min(cols, 30));
+        els.grid.style.setProperty('--cols', c);
+      }
+
+      function computeCounts(state){
+        const counts = Array(STAGES.length).fill(0);
+        for (const v of state.stage) counts[clampStage(v)]++;
+        return counts;
+      }
+
+      function renderStats(state){
+        const total = state.totalPages;
+        const counts = computeCounts(state);
+        const done = counts[7];
+        const fixes = counts[8];
+        const pct = total ? Math.round((done / total) * 100) : 0;
+        els.stats.innerHTML = `
+          <div class="pill"><span class="dot" style="background:var(--c0)"></span>総ページ：<b style="color:var(--text)">${total}</b></div>
+          <div class="pill"><span class="dot" style="background:var(--c7)"></span>完成：<b style="color:var(--text)">${done}</b></div>
+          <div class="pill"><span class="dot" style="background:var(--c8)"></span>修正：<b style="color:var(--text)">${fixes}</b></div>
+          <div class="pill"><span class="dot" style="background:var(--c7)"></span>完成率：<b style="color:var(--text)">${pct}%</b></div>
+        `;
+      }
+
+      function renderLegend(state){
+        const counts = state ? computeCounts(state) : null;
+        els.legend.innerHTML = '';
+        for (const s of STAGES){
+          const item = document.createElement('div');
+          item.className = 'item' + (s.id === selectedStageId ? ' active' : '');
+          const countText = counts ? `（${counts[s.id]}）` : '';
+          item.innerHTML = `<span class="dot" style="background:var(${s.cssVar})"></span>${s.name}${countText}`;
+          item.addEventListener('click', () => {
+            selectedStageId = s.id;
+            renderLegend(state);
+            say(`選択工程：${s.name}`);
+          });
+          els.legend.appendChild(item);
+        }
+      }
+
+      function render(state){
+        els.grid.innerHTML = '';
+        renderStats(state);
+        renderLegend(state);
+        say('作成完了：マスをクリックで工程が進みます（Shift+クリックで戻ります）');
+
+        for (let i=1; i<=state.totalPages; i++){
+          const idx = i-1;
+          const st = clampStage(state.stage[idx]);
+          const info = stageInfo(st);
+
+          const cell = document.createElement('div');
+          cell.className = 'cell';
+          cell.dataset.idx = String(idx);
+          cell.style.background = `var(${info.cssVar})`;
+          cell.innerHTML = `<span class="sub">p</span>${i}<div class="stage">${info.name}</div>`;
+
+          function applyStage(newStage){
+            state.stage[idx] = newStage;
+            const ni = stageInfo(newStage);
+            cell.style.background = `var(${ni.cssVar})`;
+            cell.querySelector('.stage').textContent = ni.name;
+            saveState(state);
+            renderStats(state);
+            renderLegend(state);
+            refreshDashboard(); // ★ ここで4作品一覧も更新
+          }
+
+          function step(dir){
+            const max = STAGES.length - 1;
+            let next = clampStage(state.stage[idx]) + dir;
+            if (next > max) next = 0;
+            if (next < 0) next = max;
+            applyStage(next);
+          }
+
+          cell.addEventListener('click', (ev)=>{
+            ev.preventDefault();
+            step(ev.shiftKey ? -1 : +1);
+          });
+          cell.addEventListener('contextmenu', (ev)=>{
+            ev.preventDefault();
+            step(+1);
+          });
+
+          els.grid.appendChild(cell);
+        }
+      }
+
+      function buildFromInputs(){
+        const total = parseInt(els.totalPages.value, 10);
+        if (!total || total < 1){
+          say('ページ数が未入力です。例：32 のように入れてから「作成/更新」を押してください。');
+          return;
+        }
+        if (total > 5000){
+          say('ページ数が大きすぎます（5000以下にしてください）。');
+          return;
+        }
+        setGridCols();
+
+        const loaded = loadState();
+        const state = loaded && loaded.totalPages
+          ? { totalPages: total, stage: Array.from({length: total}, (_, i)=> clampStage(loaded.stage?.[i] ?? 0)) }
+          : { totalPages: total, stage: Array(total).fill(0) };
+
+        saveState(state);
+        render(state);
+        refreshDashboard();
+      }
+
+      function loadCurrentProject(){
+        const st = loadState();
+        if (st && st.totalPages){
+          els.totalPages.value = st.totalPages;
+          setGridCols();
+          render(st);
+        }else{
+          els.grid.innerHTML = '';
+          els.stats.innerHTML = '';
+          renderLegend(null);
+          say('この作品の保存データはありません。ページ数を入れて「作成/更新」を押してください。');
+        }
+        refreshDashboard();
+      }
+
+      // ----- Dashboard -----
+      function pct(n, d){
+        if (!d) return 0;
+        return Math.max(0, Math.min(100, Math.round((n/d)*100)));
+      }
+
+      function makeDashCard(projectName, isActive){
+        const st = loadStateFor(projectName);
+        const total = st?.totalPages ?? 0;
+        const counts = st ? computeCounts(st) : Array(STAGES.length).fill(0);
+        const done = counts[7] || 0;
+        const fixes = counts[8] || 0;
+        const remain = total ? (total - done) : 0;
+        const p = pct(done, total);
+
+        const card = document.createElement('div');
+        card.className = 'dashCard' + (isActive ? ' active' : '');
+        card.dataset.project = projectName;
+
+        const stageLine = STAGES
+          .filter(s => s.id !== 0) // 未着手は省略しても見やすい
+          .map(s => {
+            const c = counts[s.id] || 0;
+            return `<div class="stageChip"><span class="dot" style="background:var(${s.cssVar})"></span><span class="txt">${s.name}</span> ${c}</div>`;
+          }).join('');
+
+        card.innerHTML = `
+          <div class="dashTop">
+            <div class="dashTitle" title="${escapeHtml(projectName)}">${escapeHtml(projectName)}</div>
+            <div class="badge">${total ? total + 'P' : '未作成'}</div>
+          </div>
+          <div class="bar"><div style="width:${p}%"></div></div>
+          <div class="dashNums">
+            <div class="mini"><span class="dot" style="background:var(--c7)"></span>完成 ${done}</div>
+            <div class="mini"><span class="dot" style="background:var(--c8)"></span>修正 ${fixes}</div>
+            <div class="mini"><span class="dot" style="background:var(--c0)"></span>残り ${remain}</div>
+            <div class="mini">進捗 ${p}%</div>
+          </div>
+          <div class="stageLine">${stageLine}</div>
+        `;
+
+        card.addEventListener('click', ()=>{
+          // クリックで作品切替
+          els.projectKey.value = projectName;
+          const projs = loadProjects();
+          if (projs.includes(projectName)) els.projectSelect.value = projectName;
+          loadCurrentProject();
+          highlightDashboard();
+        });
+
+        return card;
+      }
+
+      function highlightDashboard(){
+        const current = els.projectKey.value.trim();
+        Array.from(els.dash.children).forEach(el=>{
+          el.classList.toggle('active', el.dataset.project === current);
+        });
+      }
+
+      function refreshDashboard(){
+        const projects = loadProjects();
+        const current = els.projectKey.value.trim();
+        els.dash.innerHTML = '';
+        projects.forEach(name=>{
+          els.dash.appendChild(makeDashCard(name, name === current));
+        });
+      }
+
+      // ----- Init -----
+      const projects = loadProjects();
+      rebuildProjectSelect(projects, projects[0]);
+      rebuildProjectConfigUI(projects);
+
+      setGridCols();
+      loadCurrentProject(); // 内部でrefreshDashboardも呼ぶ
+
+      // ----- Events -----
+      els.projectSelect.addEventListener('change', ()=>{
+        els.projectKey.value = els.projectSelect.value;
+        loadCurrentProject();
+        highlightDashboard();
+      });
+
+      els.projectKey.addEventListener('change', ()=>{
+        const projs = loadProjects();
+        const v = els.projectKey.value.trim();
+        if (projs.includes(v)) els.projectSelect.value = v;
+        loadCurrentProject();
+        highlightDashboard();
+      });
+
+      els.buildBtn.addEventListener('click', buildFromInputs);
+
+      els.setStageBtn.addEventListener('click', ()=>{
+        const st2 = loadState();
+        if (!st2){ say('先にページ数を入れて「作成/更新」を押してください。'); return; }
+        st2.stage = st2.stage.map(()=> selectedStageId);
+        saveState(st2);
+        render(st2);
+        refreshDashboard();
+      });
+
+      els.clearBtn.addEventListener('click', ()=>{
+        const st2 = loadState();
+        if (!st2){ say('先にページ数を入れて「作成/更新」を押してください。'); return; }
+        st2.stage = st2.stage.map(()=> 0);
+        saveState(st2);
+        render(st2);
+        refreshDashboard();
+      });
+
+      els.resetBtn.addEventListener('click', ()=>{
+        localStorage.removeItem(keyName());
+        els.grid.innerHTML = '';
+        els.stats.innerHTML = '';
+        renderLegend(null);
+        say('リセットしました。ページ数を入れて「作成/更新」を押してください。');
+        refreshDashboard();
+      });
+
+      els.cols.addEventListener('change', setGridCols);
+
+      // 工程ラベル
+      function renderLegend(state){
+        const counts = state ? computeCounts(state) : null;
+        els.legend.innerHTML = '';
+        for (const s of STAGES){
+          const item = document.createElement('div');
+          item.className = 'item' + (s.id === selectedStageId ? ' active' : '');
+          const countText = counts ? `（${counts[s.id]}）` : '';
+          item.innerHTML = `<span class="dot" style="background:var(${s.cssVar})"></span>${s.name}${countText}`;
+          item.addEventListener('click', () => {
+            selectedStageId = s.id;
+            renderLegend(state);
+            say(`選択工程：${s.name}`);
+          });
+          els.legend.appendChild(item);
+        }
+      }
+
+      // 登録名編集 → 保存
+      els.saveProjectsBtn.addEventListener('click', ()=>{
+        const inputs = Array.from(els.cfgGrid.querySelectorAll('input[data-proj-idx]'));
+        const arr = inputs
+          .sort((a,b)=> Number(a.dataset.projIdx) - Number(b.dataset.projIdx))
+          .map(i => i.value.trim());
+        const saved = saveProjects(arr);
+        const current = els.projectKey.value.trim();
+        rebuildProjectSelect(saved, saved.includes(current) ? current : saved[0]);
+        rebuildProjectConfigUI(saved);
+        cfgSay('保存しました。ダッシュボード/プルダウンが更新されます。');
+        refreshDashboard();
+        highlightDashboard();
+      });
+
+      els.resetProjectsBtn.addEventListener('click', ()=>{
+        localStorage.removeItem(PROJECTS_KEY);
+        const def = loadProjects();
+        rebuildProjectSelect(def, def[0]);
+        rebuildProjectConfigUI(def);
+        cfgSay('登録名を初期化しました（進捗は残っています）。');
+        loadCurrentProject();
+        refreshDashboard();
+        highlightDashboard();
+      });
+
+      // 初回ダッシュ描画
+      refreshDashboard();
+      highlightDashboard();
+
+    })();
+  </script>
+</body>
+</html>
