@@ -320,13 +320,13 @@
   .panel{ padding:12px; }
   .dashCard{ min-height:96px; }
 
-  /* ★ 修正点：gridをやめて横一列にする */
+  /* controls：横一列（入らなければ横スクロール） */
   .controls{
     display:flex;
-    flex-wrap:nowrap;              /* 折り返さない */
+    flex-wrap:nowrap;
     gap:10px;
     align-items:flex-end;
-    overflow-x:auto;               /* 入り切らない時は横スクロール */
+    overflow-x:auto;
     -webkit-overflow-scrolling:touch;
   }
 
@@ -334,22 +334,20 @@
     flex: 0 0 auto;
   }
 
-  /* msg も同じ行に固定（伸び縮み＆省略表示） */
+  /* msg：省略しない・同列のまま表示 */
   #msg{
-    flex: 1 1 auto;
     margin-top:0;
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-    min-width:260px;
+    white-space:pre-wrap; /* 省略しない（改行OK） */
   }
+}
 
 
-    /* iPad縦/スマホは縦積み */
-    @media (max-width: 720px){
-      .topbar{ flex-direction:column; align-items:stretch; }
-      .projEdit{ min-width:unset; }
-    }
+/* iPad縦/スマホは縦積み */
+@media (max-width: 720px){
+  .topbar{ flex-direction:column; align-items:stretch; }
+  .projEdit{ min-width:unset; }
+}
+
   </style>
 </head>
 <body>
@@ -403,8 +401,12 @@
         </div>
 
 
-  <div class="msg msgInline" id="msg">準備中…（ページ数を入れて「作成/更新」を押してください）</div>
+<div class="ctl">
+  <div class="msg msgInline" id="msg">
+    準備中…（ページ数を入れて「作成/更新」を押してください）
+  </div>
 </div>
+
 
       </div>
 
