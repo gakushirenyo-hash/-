@@ -26,10 +26,8 @@
       --c6:hsl(30  50% 54%); /* 橙 */
       --c7:hsl(0   55% 56%); /* 赤（完成：一番明るい） */
       --c8:hsl(285 45% 54%); /* 紫 */
-
-
-
     }
+
     *{ box-sizing:border-box; }
     body{
       margin:0; font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans JP", sans-serif;
@@ -37,7 +35,7 @@
       color:var(--text);
     }
     .wrap{ max-width:1220px; margin:0 auto; padding:18px; }
-    h1{ font-size:18px; margin:6px 0 14px; font-weight:700; }
+    h1{ font-size:18px; margin:0; font-weight:700; }
 
     .panel{
       background: rgba(23,26,43,.92);
@@ -270,50 +268,85 @@
     @media (max-width: 720px){
       .grid{ grid-template-columns: repeat(var(--cols, 8), minmax(34px, 1fr)); }
     }
+
+    /* --- compact top layout (requested) --- */
+    .topbar{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:10px;
+      margin:6px 0 10px;
+    }
+    .projEdit{
+      margin:0;
+      border:1px solid var(--line);
+      border-radius:14px;
+      background:#0f1330;
+      padding:8px 10px;
+      min-width:260px;
+    }
+    .projEdit > summary{
+      font-weight:900;
+      color:var(--text);
+    }
+    .projEdit[open]{ padding-bottom:12px; }
+
+    /* controls as one line (then wraps) */
+    .controls{
+      display:grid;
+      grid-template-columns: 200px 1fr 140px 120px auto;
+      gap:10px;
+      align-items:end;
+      margin-top:10px;
+    }
+    .ctl label{ display:block; margin-bottom:6px; }
+    .ctl.small input{ min-width:unset; }
+    .ctl.actions{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      align-items:center;
+    }
+    .ctl.status{
+      grid-column: 1 / -1;
+    }
+    .ctl.status .msg{
+      margin-top:0;
+    }
+
+    /* iPad横向き想定：上部の余白・カード高さを圧縮 */
+    @media (max-width: 1100px){
+      .wrap{ padding:12px; }
+      .panel{ padding:12px; }
+      .dashCard{ min-height:96px; }
+      .controls{
+        grid-template-columns: 1fr 1fr;
+      }
+      .ctl.actions{ grid-column: 1 / -1; }
+      .ctl.status{ grid-column: 1 / -1; }
+    }
+
+    /* iPad縦/スマホは縦積み */
+    @media (max-width: 720px){
+      .topbar{ flex-direction:column; align-items:stretch; }
+      .projEdit{ min-width:unset; }
+    }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <h1>ページ進捗グリッド（4作品ダッシュボード）</h1>
 
-    <div class="panel">
+    <div class="topbar">
+      <h1>ページ進捗グリッド（4作品ダッシュボード）</h1>
+<div class="topActions">
+  <button id="buildBtn">作成/更新</button>
+  <button class="secondary" id="setStageBtn">選択工程に一括</button>
+  <button class="secondary" id="clearBtn">全て未着手</button>
+  <button class="danger" id="resetBtn">リセット</button>
+</div>
 
-      <!-- Dashboard -->
-      <div class="dash" id="dash"></div>
-
-      <div class="row">
-        <div>
-          <label>作品セレクタ（ワンクリック切替）</label><br>
-          <select id="projectSelect"></select>
-        </div>
-
-        <div>
-          <label>作品名（保存用キー）</label><br>
-          <input id="projectKey" type="text" placeholder="例：タケル第12話" />
-        </div>
-
-        <div>
-          <label>ページ数</label><br>
-          <input id="totalPages" type="number" min="1" max="5000" step="1" placeholder="例：32" />
-        </div>
-
-        <div>
-          <label>列数（見た目）</label><br>
-          <input id="cols" type="number" min="4" max="30" step="1" value="12" />
-        </div>
-
-        <div style="display:flex; gap:8px; flex-wrap:wrap;">
-          <button id="buildBtn">作成/更新</button>
-          <button class="secondary" id="setStageBtn">選択工程に一括</button>
-          <button class="secondary" id="clearBtn">全て未着手</button>
-          <button class="danger" id="resetBtn">リセット</button>
-        </div>
-      </div>
-
-      <div class="msg" id="msg">準備中…（ページ数を入れて「作成/更新」を押してください）</div>
-
-      <details>
-        <summary>4作品の登録名を編集（初回だけ設定）</summary>
+      <details class="projEdit">
+        <summary>4作品の登録名を編集</summary>
         <div class="cfg" id="cfgGrid"></div>
         <div class="cfgActions">
           <button class="secondary" id="saveProjectsBtn">登録名を保存</button>
@@ -321,6 +354,40 @@
         </div>
         <div class="msg" id="cfgMsg">※ここで設定した4作品がダッシュボード/プルダウンに出ます。</div>
       </details>
+    </div>
+
+    <div class="panel">
+
+      <!-- Dashboard -->
+      <div class="dash" id="dash"></div>
+
+      <!-- Compact controls -->
+      <div class="controls">
+        <div class="ctl">
+          <label>作品セレクタ（ワンクリック切替）</label>
+          <select id="projectSelect"></select>
+        </div>
+
+        <div class="ctl">
+          <label>作品名（保存用キー）</label>
+          <input id="projectKey" type="text" placeholder="例：タケル第12話" />
+        </div>
+
+        <div class="ctl small">
+          <label>ページ数</label>
+          <input id="totalPages" type="number" min="1" max="5000" step="1" placeholder="例：32" />
+        </div>
+
+        <div class="ctl small">
+          <label>列数（見た目）</label>
+          <input id="cols" type="number" min="4" max="30" step="1" value="12" />
+        </div>
+
+
+  <div class="msg msgInline" id="msg">準備中…（ページ数を入れて「作成/更新」を押してください）</div>
+</div>
+
+      </div>
 
       <div class="stats" id="stats"></div>
       <div class="legend" id="legend"></div>
@@ -493,19 +560,10 @@
         return counts;
       }
 
-      function renderStats(state){
-        const total = state.totalPages;
-        const counts = computeCounts(state);
-        const done = counts[7];
-        const fixes = counts[8];
-        const pct = total ? Math.round((done / total) * 100) : 0;
-        els.stats.innerHTML = `
-          <div class="pill"><span class="dot" style="background:var(--c0)"></span>総ページ：<b style="color:var(--text)">${total}</b></div>
-          <div class="pill"><span class="dot" style="background:var(--c7)"></span>完成：<b style="color:var(--text)">${done}</b></div>
-          <div class="pill"><span class="dot" style="background:var(--c8)"></span>修正：<b style="color:var(--text)">${fixes}</b></div>
-          <div class="pill"><span class="dot" style="background:var(--c7)"></span>完成率：<b style="color:var(--text)">${pct}%</b></div>
-        `;
-      }
+    function renderStats(state){
+  // 何もしない
+}
+
 
       function renderLegend(state){
         const counts = state ? computeCounts(state) : null;
@@ -630,7 +688,7 @@
         card.dataset.project = projectName;
 
         const stageLine = STAGES
-          .filter(s => s.id !== 0) // 未着手は省略しても見やすい
+          .filter(s => s.id !== 0)
           .map(s => {
             const c = counts[s.id] || 0;
             return `<div class="stageChip"><span class="dot" style="background:var(${s.cssVar})"></span><span class="txt">${s.name}</span> ${c}</div>`;
@@ -652,7 +710,6 @@
         `;
 
         card.addEventListener('click', ()=>{
-          // クリックで作品切替
           els.projectKey.value = projectName;
           const projs = loadProjects();
           if (projs.includes(projectName)) els.projectSelect.value = projectName;
@@ -685,7 +742,7 @@
       rebuildProjectConfigUI(projects);
 
       setGridCols();
-      loadCurrentProject(); // 内部でrefreshDashboardも呼ぶ
+      loadCurrentProject();
 
       // ----- Events -----
       els.projectSelect.addEventListener('change', ()=>{
@@ -732,24 +789,6 @@
       });
 
       els.cols.addEventListener('change', setGridCols);
-
-      // 工程ラベル
-      function renderLegend(state){
-        const counts = state ? computeCounts(state) : null;
-        els.legend.innerHTML = '';
-        for (const s of STAGES){
-          const item = document.createElement('div');
-          item.className = 'item' + (s.id === selectedStageId ? ' active' : '');
-          const countText = counts ? `（${counts[s.id]}）` : '';
-          item.innerHTML = `<span class="dot" style="background:var(${s.cssVar})"></span>${s.name}${countText}`;
-          item.addEventListener('click', () => {
-            selectedStageId = s.id;
-            renderLegend(state);
-            say(`選択工程：${s.name}`);
-          });
-          els.legend.appendChild(item);
-        }
-      }
 
       // 登録名編集 → 保存
       els.saveProjectsBtn.addEventListener('click', ()=>{
