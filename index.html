@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>ページ進捗グリッド（4作品ダッシュボード）</title>
+  <title>ページ進捗グリッド（ID管理・堅牢版v10.9）</title>
   <style>
     :root{
       --bg:#0f1220;
@@ -14,18 +14,18 @@
       --focus:#7aa2ff;
       --danger:#ff6b6b;
 
-      /* 未着手：目立たせないニュートラル */
-      --c0:hsl(220 18% 28%); /* 未着手 */
+      /* 未着手 */
+      --c0:hsl(220 18% 28%);
 
-      /* 押すたびにこの順番で色が進む */
+      /* 進捗色 */
       --c1:hsl(215 45% 48%); /* 青 */
       --c2:hsl(195 42% 46%); /* 青緑 */
       --c3:hsl(165 40% 44%); /* 緑 */
       --c4:hsl(95  40% 48%); /* 黄緑 */
       --c5:hsl(55  45% 52%); /* 黄 */
       --c6:hsl(30  50% 54%); /* 橙 */
-      --c7:hsl(0   55% 56%); /* 赤（完成：一番明るい） */
-      --c8:hsl(285 45% 54%); /* 紫 */
+      --c7:hsl(0   55% 56%); /* 赤（完成） */
+      --c8:hsl(285 45% 54%); /* 紫（修正） */
     }
 
     *{ box-sizing:border-box; }
@@ -68,6 +68,7 @@
       border-radius:10px;
       cursor:pointer;
       font-weight:700;
+      white-space: nowrap;
     }
     button:hover{ filter:brightness(1.08); }
     button.secondary{
@@ -80,6 +81,10 @@
       background: rgba(255,107,107,.15);
       border:1px solid rgba(255,107,107,.55);
       color:#ffd7d7;
+    }
+    button.small{
+      padding:6px 10px;
+      font-size:12px;
     }
 
     .msg{
@@ -94,14 +99,22 @@
       white-space:pre-wrap;
     }
 
-    /* --- Dashboard --- */
+    /* --- Dashboard (Horizontal Scroll) --- */
     .dash{
-      display:grid;
-      grid-template-columns: repeat(4, 1fr);
+      display:flex;
       gap:10px;
+      overflow-x:auto; 
+      -webkit-overflow-scrolling:touch;
+      padding-bottom:4px; 
       margin-bottom:12px;
     }
+    .dash::-webkit-scrollbar{ height:6px; }
+    .dash::-webkit-scrollbar-thumb{ background:rgba(42,47,82,.8); border-radius:4px; }
+    .dash::-webkit-scrollbar-track{ background:transparent; }
+
     .dashCard{
+      flex: 0 0 calc((100% - 30px) / 4);
+      min-width: 200px;
       border:1px solid var(--line);
       border-radius:14px;
       background: rgba(15,19,48,.85);
@@ -198,20 +211,27 @@
       list-style:none;
     }
     summary::-webkit-details-marker{ display:none; }
-    .cfg{
+      
+    .cfgList{
       margin-top:10px;
-      display:grid;
-      grid-template-columns: 1fr 1fr;
-      gap:10px;
+      display:flex;
+      flex-direction:column;
+      gap:8px;
     }
-    .cfg .box{
-      border:1px solid var(--line);
-      border-radius:12px;
-      padding:10px;
+    .cfgRow{
+      display:flex;
+      gap:8px;
+      align-items:center;
       background: rgba(16,20,58,.55);
+      padding:8px;
+      border-radius:10px;
+      border:1px solid var(--line);
     }
-    .cfg .box input{ width:100%; min-width:unset; }
-    .cfgActions{ margin-top:10px; display:flex; gap:8px; flex-wrap:wrap; }
+    .cfgRow input{ flex:1; min-width:unset; }
+    .cfgRow .idLabel{ font-size:10px; color:var(--muted); min-width:40px; }
+      
+    .cfgActions{ margin-top:12px; display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+    .cfgActions .spacer{ flex:1; }
 
     .stats{ margin-top:12px; display:flex; flex-wrap:wrap; gap:8px; color:var(--muted); font-size:12px; }
     .pill{ background:#0f1330; border:1px solid var(--line); border-radius:999px; padding:6px 10px; display:flex; align-items:center; gap:8px; }
@@ -260,16 +280,15 @@
     .footer{ margin-top:12px; color:var(--muted); font-size:12px; line-height:1.7; }
 
     @media (max-width: 980px){
-      .dash{ grid-template-columns: 1fr 1fr; }
+      .dashCard{ flex: 0 0 calc((100% - 10px) / 2); }
     }
     @media (max-width: 560px){
-      .dash{ grid-template-columns: 1fr; }
+      .dashCard{ flex: 0 0 100%; }
     }
     @media (max-width: 720px){
       .grid{ grid-template-columns: repeat(var(--cols, 8), minmax(34px, 1fr)); }
     }
 
-    /* --- compact top layout (requested) --- */
     .topbar{
       display:flex;
       align-items:center;
@@ -291,10 +310,9 @@
     }
     .projEdit[open]{ padding-bottom:12px; }
 
-    /* controls as one line (then wraps) */
     .controls{
       display:grid;
-      grid-template-columns: 200px 1fr 140px 120px auto;
+      grid-template-columns: 200px 1fr 120px auto;
       gap:10px;
       align-items:end;
       margin-top:10px;
@@ -314,13 +332,11 @@
       margin-top:0;
     }
 
-/* iPad横向き想定：上部の余白・カード高さを圧縮 */
 @media (max-width: 1100px){
   .wrap{ padding:12px; }
   .panel{ padding:12px; }
   .dashCard{ min-height:96px; }
 
-  /* controls：横一列（入らなければ横スクロール） */
   .controls{
     display:flex;
     flex-wrap:nowrap;
@@ -334,15 +350,12 @@
     flex: 0 0 auto;
   }
 
-  /* msg：省略しない・同列のまま表示 */
   #msg{
     margin-top:0;
-    white-space:pre-wrap; /* 省略しない（改行OK） */
+    white-space:pre-wrap;
   }
 }
 
-
-/* iPad縦/スマホは縦積み */
 @media (max-width: 720px){
   .topbar{ flex-direction:column; align-items:stretch; }
   .projEdit{ min-width:unset; }
@@ -354,40 +367,36 @@
   <div class="wrap">
 
     <div class="topbar">
-      <h1>ページ進捗グリッド（4作品ダッシュボード）</h1>
+      <h1>ページ進捗グリッド（ID管理・堅牢版v10.9）</h1>
 <div class="topActions">
   <button id="buildBtn">作成/更新</button>
   <button class="secondary" id="setStageBtn">選択工程に一括</button>
+  <button class="secondary" id="restoreBtn">バックアップ復元</button>
   <button class="secondary" id="clearBtn">全て未着手</button>
   <button class="danger" id="resetBtn">リセット</button>
 </div>
 
       <details class="projEdit">
-        <summary>4作品の登録名を編集</summary>
-        <div class="cfg" id="cfgGrid"></div>
+        <summary>作品リスト編集（追加・削除）</summary>
+        <div class="cfgList" id="cfgList"></div>
         <div class="cfgActions">
-          <button class="secondary" id="saveProjectsBtn">登録名を保存</button>
-          <button class="secondary" id="resetProjectsBtn" title="登録名だけ初期化（進捗は消えません）">登録名を初期化</button>
+          <button id="addProjectBtn">＋ 作品を追加</button>
+          <div class="spacer"></div>
+          <button class="secondary" id="saveProjectsBtn">名前を保存</button>
+          <button class="secondary" id="resetProjectsBtn" title="リストを初期状態に戻します">リスト初期化</button>
         </div>
-        <div class="msg" id="cfgMsg">※ここで設定した4作品がダッシュボード/プルダウンに出ます。</div>
+        <div class="msg" id="cfgMsg">※作品を追加・削除できます。削除時はデータの消去も選択可能です。</div>
       </details>
     </div>
 
     <div class="panel">
 
-      <!-- Dashboard -->
       <div class="dash" id="dash"></div>
 
-      <!-- Compact controls -->
       <div class="controls">
         <div class="ctl">
-          <label>作品セレクタ（ワンクリック切替）</label>
+          <label>作品セレクタ</label>
           <select id="projectSelect"></select>
-        </div>
-
-        <div class="ctl">
-          <label>作品名（保存用キー）</label>
-          <input id="projectKey" type="text" placeholder="例：タケル第12話" />
         </div>
 
         <div class="ctl small">
@@ -403,7 +412,7 @@
 
 <div class="ctl">
   <div class="msg msgInline" id="msg">
-    準備中…（ページ数を入れて「作成/更新」を押してください）
+    準備中…
   </div>
 </div>
 
@@ -415,9 +424,9 @@
       <div class="grid" id="grid"></div>
 
       <div class="footer">
-        ・上の4枚カードがダッシュボードです。クリックでその作品に切り替わります。<br>
+        ・ダッシュボードは横スクロール可能です。クリックでその作品に切り替わります。<br>
         ・クリックで次工程へ。<b>Shift+クリック</b>で戻る（右クリックでも進む）。<br>
-        ・保存はブラウザ内（localStorage）です。
+        ・ID管理のため、作品名を変更しても進捗は維持されます。
       </div>
     </div>
   </div>
@@ -427,11 +436,11 @@
       const els = {
         dash: document.getElementById('dash'),
         projectSelect: document.getElementById('projectSelect'),
-        projectKey: document.getElementById('projectKey'),
         totalPages: document.getElementById('totalPages'),
         cols: document.getElementById('cols'),
         buildBtn: document.getElementById('buildBtn'),
         setStageBtn: document.getElementById('setStageBtn'),
+        restoreBtn: document.getElementById('restoreBtn'),
         clearBtn: document.getElementById('clearBtn'),
         resetBtn: document.getElementById('resetBtn'),
         grid: document.getElementById('grid'),
@@ -439,14 +448,24 @@
         legend: document.getElementById('legend'),
         msg: document.getElementById('msg'),
 
-        cfgGrid: document.getElementById('cfgGrid'),
+        cfgList: document.getElementById('cfgList'),
         cfgMsg: document.getElementById('cfgMsg'),
+        addProjectBtn: document.getElementById('addProjectBtn'),
         saveProjectsBtn: document.getElementById('saveProjectsBtn'),
         resetProjectsBtn: document.getElementById('resetProjectsBtn'),
       };
 
       const STORAGE_PREFIX = 'pageGridProgressStages::';
-      const PROJECTS_KEY = 'pageGridProjects::list_v1';
+      const PROJECTS_KEY_V2 = 'pageGridProjects::list_v2';
+      const PROJECTS_KEY_OLD = 'pageGridProjects::list_v1';
+      const MIGRATE_FLAG_KEY = 'pageGridProjects::migrated_v1_to_v2_done';
+
+      const DEFAULT_PROJECT_OBJS = [
+        { id: 'p1', name: '作品A' },
+        { id: 'p2', name: '作品B' },
+        { id: 'p3', name: '作品C' },
+        { id: 'p4', name: '作品D' }
+      ];
 
       const STAGES = [
         { id: 0, name: '未着手', cssVar: '--c0' },
@@ -461,9 +480,25 @@
       ];
 
       let selectedStageId = 7;
+      let currentProjectId = 'p1'; 
+      
+      // 【安全対策】メモリ状態と保存IDの厳密管理
+      let activeState = null;
+      let activeStateProjectId = null; 
+      let saveDebounceTimer = null;
+      let pendingSaveProjectId = null;
+      // 【高速化】カウントキャッシュ
+      let activeCounts = null;
 
       function say(t){ els.msg.textContent = t; }
       function cfgSay(t){ els.cfgMsg.textContent = t; }
+
+      function genId() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+          return 'p' + crypto.randomUUID();
+        }
+        return 'p' + Date.now().toString(36) + Math.random().toString(36).substring(2, 5);
+      }
 
       function clampStage(n){
         const max = STAGES.length - 1;
@@ -479,93 +514,343 @@
         return STAGES.find(s => s.id === id) || STAGES[0];
       }
 
-      // ----- Projects -----
-      const DEFAULT_PROJECTS = ['作品A','作品B','作品C','作品D'];
-
-      function loadProjects(){
-        try{
-          const raw = localStorage.getItem(PROJECTS_KEY);
-          if (!raw) return DEFAULT_PROJECTS.slice();
-          const arr = JSON.parse(raw);
-          if (!Array.isArray(arr)) return DEFAULT_PROJECTS.slice();
-          const fixed = arr.slice(0,4).map((v,i)=> (String(v||'').trim() || DEFAULT_PROJECTS[i]));
-          while (fixed.length < 4) fixed.push(DEFAULT_PROJECTS[fixed.length]);
-          return fixed;
-        }catch{
-          return DEFAULT_PROJECTS.slice();
-        }
+      // --- Storage Keys ---
+      function storageKeyFor(id){
+        return STORAGE_PREFIX + 'id:' + encodeURIComponent(id);
       }
-      function saveProjects(arr){
-        const fixed = arr.slice(0,4).map((v,i)=> (String(v||'').trim() || DEFAULT_PROJECTS[i]));
-        localStorage.setItem(PROJECTS_KEY, JSON.stringify(fixed));
-        return fixed;
+      function backupKeyFor(id){
+        return STORAGE_PREFIX + 'backup:' + encodeURIComponent(id);
       }
-      function rebuildProjectSelect(projects, keepValue){
-        const current = keepValue ?? els.projectSelect.value;
-        els.projectSelect.innerHTML = '';
-        projects.forEach((name, idx)=>{
-          const opt = document.createElement('option');
-          opt.value = name;
-          opt.textContent = `${idx+1}. ${name}`;
-          els.projectSelect.appendChild(opt);
-        });
-        const found = projects.includes(current) ? current : projects[0];
-        els.projectSelect.value = found;
-        els.projectKey.value = found;
+      function legacyStorageKeyForName(name){
+        const k = (name || '').trim() || 'default';
+        return STORAGE_PREFIX + 'k:' + encodeURIComponent(k);
       }
-      function rebuildProjectConfigUI(projects){
-        els.cfgGrid.innerHTML = '';
-        projects.forEach((name, idx)=>{
-          const box = document.createElement('div');
-          box.className = 'box';
-          box.innerHTML = `
-            <label>枠${idx+1}</label><br>
-            <input type="text" data-proj-idx="${idx}" value="${escapeHtml(name)}" />
-          `;
-          els.cfgGrid.appendChild(box);
-        });
-      }
-      function escapeHtml(s){
-        return String(s)
-          .replaceAll('&','&amp;')
-          .replaceAll('<','&lt;')
-          .replaceAll('>','&gt;')
-          .replaceAll('"','&quot;')
-          .replaceAll("'","&#39;");
-      }
-
-      // ----- State -----
-      function keyNameFor(projectName){
-        const k = (projectName || '').trim();
+      function legacyStorageKeyForNameOld(name){
+        const k = (name || '').trim();
         return STORAGE_PREFIX + (k ? k : 'default');
       }
-      function keyName(){
-        return keyNameFor(els.projectKey.value);
+
+      // --- Project List Normalization ---
+      function normalizeProjects(list) {
+        const map = new Map();
+        let changed = false;
+        const src = Array.isArray(list) ? list : [];
+
+        for (let i = 0; i < src.length; i++) {
+          const p = src[i] || {};
+          let id = (typeof p.id === 'string' ? p.id : String(p.id ?? '')).trim();
+          let name = (typeof p.name === 'string' ? p.name : String(p.name ?? '')).trim();
+          if (!id) { id = genId(); changed = true; }
+          if (map.has(id)) changed = true;
+          map.set(id, { id, name });
+        }
+
+        let out = Array.from(map.values());
+        const finalOut = [];
+        for(let i=0; i<out.length; i++){
+            if(i >= 50) { changed = true; break; }
+            let p = out[i];
+            if(!p.name){ p.name = `作品 ${i+1}`; changed = true; }
+            finalOut.push(p);
+        }
+        out = finalOut;
+        if (out.length === 0) {
+          out.push({ id: genId(), name: '新規作品' });
+          changed = true;
+        }
+        return { list: out, changed };
       }
-      function loadStateFor(projectName){
-        try{
-          const raw = localStorage.getItem(keyNameFor(projectName));
-          if (!raw) return null;
-          return JSON.parse(raw);
-        }catch{
-          return null;
+
+      function isPlausibleStateObj(o){
+        if (!o || typeof o !== 'object') return false;
+        const tp = Number(o.totalPages);
+        const hasPages = Number.isFinite(tp) && tp > 0 && tp <= 5000;
+        const hasStage = Array.isArray(o.stage) && o.stage.length > 0;
+        return hasPages || hasStage;
+      }
+
+      function sanitizeState(raw){
+        if (!raw) return { state: null, changed: false };
+        let changed = false;
+        let pages = Number(raw?.totalPages);
+        const stageLen = Array.isArray(raw?.stage) ? raw.stage.length : 0;
+        const isPagesValid = Number.isFinite(pages) && pages >= 1 && pages <= 5000;
+
+        if (!isPagesValid) {
+          if (stageLen >= 1) pages = Math.min(stageLen, 5000);
+          else pages = 32; 
+          changed = true;
+        }
+
+        let arr = raw?.stage;
+        if (!Array.isArray(arr)){
+          arr = Array(pages).fill(0);
+          changed = true;
+        } else {
+          if (arr.length !== pages){
+            if (arr.length < pages){
+              const fill = Array(pages - arr.length).fill(0);
+              arr = arr.concat(fill);
+            } else {
+              arr = arr.slice(0, pages);
+            }
+            changed = true;
+          }
+          const cleanArr = arr.map(v => {
+            const c = clampStage(v);
+            if (c !== v) changed = true;
+            return c;
+          });
+          arr = cleanArr;
+        }
+        return { state: { totalPages: pages, stage: arr }, changed: changed };
+      }
+
+      // --- Projects Management ---
+      function loadProjects(){
+        try {
+          const rawV2 = localStorage.getItem(PROJECTS_KEY_V2);
+          if (rawV2) {
+            const arr = JSON.parse(rawV2);
+            const res = normalizeProjects(arr);
+            if (res.changed) {
+              localStorage.setItem(PROJECTS_KEY_V2, JSON.stringify(res.list));
+            }
+            return res.list;
+          }
+          if (localStorage.getItem(MIGRATE_FLAG_KEY) === '1'){
+            return normalizeProjects(DEFAULT_PROJECT_OBJS).list;
+          }
+          const rawV1 = localStorage.getItem(PROJECTS_KEY_OLD);
+          let oldNames = [];
+          if (rawV1) oldNames = JSON.parse(rawV1) || [];
+          const candidates = DEFAULT_PROJECT_OBJS.map((def, i) => {
+            const oldName = oldNames[i];
+            return {
+              id: def.id,
+              name: (oldName && typeof oldName === 'string') ? oldName : def.name
+            };
+          });
+          const norm = normalizeProjects(candidates);
+          const newProjects = norm.list;
+          newProjects.forEach(p => {
+            const newKey = storageKeyFor(p.id);
+            if (!localStorage.getItem(newKey)) {
+              let oldData = localStorage.getItem(legacyStorageKeyForName(p.name)) || localStorage.getItem(legacyStorageKeyForNameOld(p.name));
+              if (oldData) localStorage.setItem(newKey, oldData);
+            }
+          });
+          localStorage.setItem(PROJECTS_KEY_V2, JSON.stringify(newProjects));
+          localStorage.setItem(MIGRATE_FLAG_KEY, '1');
+          return newProjects;
+        } catch(e) {
+          return normalizeProjects(DEFAULT_PROJECT_OBJS).list;
         }
       }
-      function loadState(){
-        try{
-          const raw = localStorage.getItem(keyName());
-          if (!raw) return null;
-          return JSON.parse(raw);
-        }catch(e){
-          say('保存データの読み込みに失敗しました。\n' + e);
-          return null;
+
+      function saveProjects(projObjArray){
+        try {
+          const res = normalizeProjects(projObjArray);
+          localStorage.setItem(PROJECTS_KEY_V2, JSON.stringify(res.list));
+          return res.list;
+        } catch(e) {
+          cfgSay('保存失敗: ' + e);
+          return loadProjects(); 
         }
       }
-      function saveState(state){
-        try{
-          localStorage.setItem(keyName(), JSON.stringify(state));
-        }catch(e){
-          say('保存に失敗しました（ブラウザ設定や容量の可能性）。\n' + e);
+
+      // --- UI Builders ---
+      function rebuildProjectSelect(projects, keepId){
+        els.projectSelect.innerHTML = '';
+        projects.forEach((p, idx) => {
+          const opt = document.createElement('option');
+          opt.value = p.id;
+          opt.textContent = `${idx+1}. ${p.name}`;
+          els.projectSelect.appendChild(opt);
+        });
+        if (keepId && projects.some(p => p.id === keepId)) {
+          els.projectSelect.value = keepId;
+        } else {
+          els.projectSelect.value = projects[0].id;
+        }
+        
+        if(currentProjectId !== els.projectSelect.value) {
+            flushSave();
+        }
+        currentProjectId = els.projectSelect.value;
+      }
+
+      function rebuildProjectConfigUI(projects){
+        els.cfgList.innerHTML = ''; 
+        projects.forEach((p) => {
+          const row = document.createElement('div');
+          row.className = 'cfgRow';
+          
+          const label = document.createElement('span');
+          label.className = 'idLabel';
+          label.textContent = `ID:${p.id}`;
+          row.appendChild(label);
+
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.dataset.projId = p.id;
+          input.value = p.name;
+          input.placeholder = '作品名';
+          row.appendChild(input);
+          
+          const delBtn = document.createElement('button');
+          delBtn.className = 'danger small';
+          delBtn.textContent = '削除';
+          delBtn.onclick = () => handleDeleteProject(p.id, p.name);
+          if (projects.length <= 1) delBtn.disabled = true;
+
+          row.appendChild(delBtn);
+          els.cfgList.appendChild(row);
+        });
+      }
+
+      function getCurrentConfigNames(){
+        const inputs = Array.from(els.cfgList.querySelectorAll('input[data-proj-id]'));
+        return inputs.map(input => ({
+          id: input.dataset.projId,
+          name: input.value
+        }));
+      }
+
+      function handleAddProject(){
+        flushSave(); 
+        const currentList = getCurrentConfigNames();
+        const newId = genId();
+        currentList.push({ id: newId, name: '新規作品' });
+        const saved = saveProjects(currentList);
+        currentProjectId = newId; 
+        updateAllUI(saved);
+        cfgSay('作品を追加し、選択しました。');
+      }
+
+      function handleDeleteProject(targetId, targetName){
+        if (!confirm(`「${targetName}」をリストから削除しますか？`)) return;
+        flushSave();
+
+        let deleteData = false;
+        if (confirm(`この作品（ID:${targetId}）の進捗データも完全に消去しますか？\n\n・「キャンセル」→ リストから消すだけ\n・「OK」→ データも削除`)){
+          deleteData = true;
+        }
+
+        let currentList = getCurrentConfigNames();
+        currentList = currentList.filter(p => p.id !== targetId);
+        const saved = saveProjects(currentList);
+        
+        if (deleteData) {
+          localStorage.removeItem(storageKeyFor(targetId));
+          localStorage.removeItem(backupKeyFor(targetId));
+          // メモリ上の状態もクリア
+          if(activeStateProjectId === targetId) {
+             activeState = null;
+             activeCounts = null;
+             activeStateProjectId = null;
+             pendingSaveProjectId = null;
+             if(saveDebounceTimer) { clearTimeout(saveDebounceTimer); saveDebounceTimer = null; }
+          }
+        }
+        if (currentProjectId === targetId) {
+          currentProjectId = saved[0].id;
+        }
+        updateAllUI(saved);
+        cfgSay(`「${targetName}」を削除しました。`);
+      }
+
+      function updateAllUI(projects){
+        rebuildProjectSelect(projects, currentProjectId);
+        rebuildProjectConfigUI(projects);
+        refreshMainView(); 
+        scheduleDashboardUpdate();
+      }
+
+      // --- State Management ---
+      function loadStateForId(id){
+        const key = storageKeyFor(id);
+        const backupKey = backupKeyFor(id);
+        const rawMain = localStorage.getItem(key);
+        const rawBackup = localStorage.getItem(backupKey);
+
+        if (!rawMain && !rawBackup) return null;
+        let rawObj = null;
+        let loadedFromBackup = false;
+
+        if (rawMain) {
+          try {
+            const parsed = JSON.parse(rawMain);
+            if (isPlausibleStateObj(parsed)) rawObj = parsed;
+          } catch(e) {}
+        }
+        if (!rawObj && rawBackup) {
+          try {
+            const parsed = JSON.parse(rawBackup);
+            if (isPlausibleStateObj(parsed)) { rawObj = parsed; loadedFromBackup = true; }
+          } catch(e) {}
+        }
+        if (!rawObj) return null;
+
+        const result = sanitizeState(rawObj);
+        if (loadedFromBackup || result.changed) {
+          saveStateImmediate(id, result.state, { skipBackup: true });
+        }
+        return result.state;
+      }
+
+      function loadCurrentState(){
+        return loadStateForId(currentProjectId);
+      }
+
+      function saveStateImmediate(id, state, opts = {}){
+        try {
+          const safe = sanitizeState(state).state;
+          if (!safe) return; 
+          const newJson = JSON.stringify(safe);
+          const key = storageKeyFor(id);
+          const backupKey = backupKeyFor(id);
+
+          let oldRawToBackup = null;
+          if (!opts.skipBackup) {
+            const oldRaw = localStorage.getItem(key);
+            if (oldRaw) {
+              try {
+                const parsed = JSON.parse(oldRaw);
+                if (isPlausibleStateObj(parsed)) {
+                  const san = sanitizeState(parsed);
+                  if (san.state) oldRawToBackup = oldRaw; 
+                }
+              } catch (e) { }
+            }
+          }
+          localStorage.setItem(key, newJson);
+          if (oldRawToBackup) localStorage.setItem(backupKey, oldRawToBackup);
+        } catch(e) {
+          say('保存失敗: ' + e);
+        }
+      }
+
+      function debouncedSave(id, state) {
+        if (saveDebounceTimer) clearTimeout(saveDebounceTimer);
+        pendingSaveProjectId = id; 
+        
+        saveDebounceTimer = setTimeout(() => {
+          saveStateImmediate(pendingSaveProjectId, state);
+          saveDebounceTimer = null;
+          pendingSaveProjectId = null;
+        }, 200); 
+      }
+
+      function flushSave() {
+        if (saveDebounceTimer && activeState) {
+          clearTimeout(saveDebounceTimer);
+          const targetId = pendingSaveProjectId || activeStateProjectId;
+          if (targetId) {
+             saveStateImmediate(targetId, activeState);
+          }
+          saveDebounceTimer = null;
+          pendingSaveProjectId = null;
         }
       }
 
@@ -577,26 +862,32 @@
 
       function computeCounts(state){
         const counts = Array(STAGES.length).fill(0);
-        for (const v of state.stage) counts[clampStage(v)]++;
+        if (state && state.stage) {
+          for (const v of state.stage) counts[clampStage(v)]++;
+        }
         return counts;
       }
 
-    function renderStats(state){
-  // 何もしない
-}
+      function renderStats(state){}
 
-
-      function renderLegend(state){
-        const counts = state ? computeCounts(state) : null;
-        els.legend.innerHTML = '';
+      // 【高速化】counts 引数を受け取って描画
+      function renderLegend(counts){
+        els.legend.innerHTML = ''; 
         for (const s of STAGES){
           const item = document.createElement('div');
           item.className = 'item' + (s.id === selectedStageId ? ' active' : '');
           const countText = counts ? `（${counts[s.id]}）` : '';
-          item.innerHTML = `<span class="dot" style="background:var(${s.cssVar})"></span>${s.name}${countText}`;
+          
+          const dot = document.createElement('span');
+          dot.className = 'dot';
+          dot.style.background = `var(${s.cssVar})`;
+          
+          item.appendChild(dot);
+          item.appendChild(document.createTextNode(s.name + countText));
           item.addEventListener('click', () => {
             selectedStageId = s.id;
-            renderLegend(state);
+            // 再描画時は現在のキャッシュを渡す
+            renderLegend(activeCounts); 
             say(`選択工程：${s.name}`);
           });
           els.legend.appendChild(item);
@@ -605,98 +896,174 @@
 
       function render(state){
         els.grid.innerHTML = '';
+        
+        activeState = state; 
+        activeStateProjectId = currentProjectId;
+        // 【高速化】初期ロード時にカウント計算＆キャッシュ
+        activeCounts = computeCounts(state);
+
         renderStats(state);
-        renderLegend(state);
-        say('作成完了：マスをクリックで工程が進みます（Shift+クリックで戻ります）');
+        renderLegend(activeCounts);
+          
+        if (!state || !state.totalPages) return;
+        say(`ID:${currentProjectId} のデータを表示中。`);
+
+        const frag = document.createDocumentFragment();
 
         for (let i=1; i<=state.totalPages; i++){
           const idx = i-1;
-          const st = clampStage(state.stage[idx]);
+          const st = state.stage[idx]; 
           const info = stageInfo(st);
 
           const cell = document.createElement('div');
           cell.className = 'cell';
           cell.dataset.idx = String(idx);
           cell.style.background = `var(${info.cssVar})`;
-          cell.innerHTML = `<span class="sub">p</span>${i}<div class="stage">${info.name}</div>`;
+          
+          const sub = document.createElement('span');
+          sub.className = 'sub';
+          sub.textContent = 'p';
+          
+          const stageDiv = document.createElement('div');
+          stageDiv.className = 'stage';
+          stageDiv.textContent = info.name;
+          
+          cell.appendChild(sub);
+          cell.appendChild(document.createTextNode(i));
+          cell.appendChild(stageDiv);
 
-          function applyStage(newStage){
-            state.stage[idx] = newStage;
-            const ni = stageInfo(newStage);
-            cell.style.background = `var(${ni.cssVar})`;
-            cell.querySelector('.stage').textContent = ni.name;
-            saveState(state);
-            renderStats(state);
-            renderLegend(state);
-            refreshDashboard(); // ★ ここで4作品一覧も更新
-          }
-
-          function step(dir){
-            const max = STAGES.length - 1;
-            let next = clampStage(state.stage[idx]) + dir;
-            if (next > max) next = 0;
-            if (next < 0) next = max;
-            applyStage(next);
-          }
-
-          cell.addEventListener('click', (ev)=>{
-            ev.preventDefault();
-            step(ev.shiftKey ? -1 : +1);
-          });
-          cell.addEventListener('contextmenu', (ev)=>{
-            ev.preventDefault();
-            step(+1);
-          });
-
-          els.grid.appendChild(cell);
+          frag.appendChild(cell);
         }
+        els.grid.appendChild(frag);
       }
+
+      function handleCellInteraction(idx, dir) {
+        if (!activeState || !activeState.stage) return;
+        
+        const max = STAGES.length - 1;
+        const prev = activeState.stage[idx]; // 変更前
+        let next = clampStage(prev) + dir;
+        if (next > max) next = 0;
+        if (next < 0) next = max;
+
+        // 状態更新
+        activeState.stage[idx] = next;
+        
+        // 【堅牢化】差分更新の安全策
+        if (activeCounts) {
+            const p = clampStage(prev);
+            // 既に0以下の場合はズレているので再同期
+            if(activeCounts[p] > 0) {
+                activeCounts[p]--;
+                activeCounts[next]++;
+            } else {
+                activeCounts = computeCounts(activeState);
+            }
+        } else {
+            // countsがnullの場合も再計算
+            activeCounts = computeCounts(activeState);
+        }
+
+        // UI即時更新
+        const cell = els.grid.children[idx]; 
+        if (cell) {
+            const ni = stageInfo(next);
+            cell.style.background = `var(${ni.cssVar})`;
+            const stDiv = cell.querySelector('.stage');
+            if(stDiv) stDiv.textContent = ni.name;
+        }
+
+        // キャッシュ済みカウントで凡例更新 (高速)
+        renderStats(activeState);
+        renderLegend(activeCounts);
+        
+        // 【負荷軽減】ダッシュボード更新は重いので更新間隔を緩和
+        scheduleDashboardUpdate();
+
+        debouncedSave(activeStateProjectId, activeState);
+      }
+
+      els.grid.addEventListener('click', (ev) => {
+        const cell = ev.target.closest('.cell');
+        if(!cell) return;
+        ev.preventDefault();
+        const idx = Number(cell.dataset.idx);
+        if(!Number.isFinite(idx)) return;
+        handleCellInteraction(idx, ev.shiftKey ? -1 : 1);
+      });
+
+      els.grid.addEventListener('contextmenu', (ev) => {
+        const cell = ev.target.closest('.cell');
+        if(!cell) return;
+        ev.preventDefault();
+        const idx = Number(cell.dataset.idx);
+        if(!Number.isFinite(idx)) return;
+        handleCellInteraction(idx, 1);
+      });
+
 
       function buildFromInputs(){
         const total = parseInt(els.totalPages.value, 10);
-        if (!total || total < 1){
-          say('ページ数が未入力です。例：32 のように入れてから「作成/更新」を押してください。');
-          return;
-        }
-        if (total > 5000){
-          say('ページ数が大きすぎます（5000以下にしてください）。');
-          return;
-        }
+        if (!total || total < 1){ say('ページ数が未入力です。'); return; }
+        if (total > 5000){ say('ページ数が大きすぎます。'); return; }
         setGridCols();
 
-        const loaded = loadState();
-        const state = loaded && loaded.totalPages
-          ? { totalPages: total, stage: Array.from({length: total}, (_, i)=> clampStage(loaded.stage?.[i] ?? 0)) }
-          : { totalPages: total, stage: Array(total).fill(0) };
+        const loaded = loadCurrentState();
+        const stageArr = loaded && loaded.stage ? loaded.stage : [];
+        const newStage = Array.from({length: total}, (_, i) => {
+          return stageArr[i] !== undefined ? clampStage(stageArr[i]) : 0;
+        });
 
-        saveState(state);
-        render(state);
-        refreshDashboard();
+        const newState = { totalPages: total, stage: newStage };
+        saveStateImmediate(currentProjectId, newState); 
+        render(newState);
+        scheduleDashboardUpdate();
       }
 
-      function loadCurrentProject(){
-        const st = loadState();
+      function refreshMainView(){
+        const st = loadCurrentState();
         if (st && st.totalPages){
           els.totalPages.value = st.totalPages;
           setGridCols();
           render(st);
-        }else{
+        } else {
           els.grid.innerHTML = '';
           els.stats.innerHTML = '';
+          activeState = null;
+          activeCounts = null;
+          activeStateProjectId = null;
           renderLegend(null);
-          say('この作品の保存データはありません。ページ数を入れて「作成/更新」を押してください。');
+          say(`ID:${currentProjectId} は未作成です。`);
         }
-        refreshDashboard();
+        scheduleDashboardUpdate();
       }
 
-      // ----- Dashboard -----
+      // --- Dashboard ---
+      let dashTimer = null;
+      function scheduleDashboardUpdate(){
+        if (dashTimer) clearTimeout(dashTimer);
+        // 【負荷軽減】400msへ緩和
+        dashTimer = setTimeout(()=>{
+          refreshDashboard();
+          highlightDashboard();
+          dashTimer = null;
+        }, 400);
+      }
+
       function pct(n, d){
         if (!d) return 0;
         return Math.max(0, Math.min(100, Math.round((n/d)*100)));
       }
 
-      function makeDashCard(projectName, isActive){
-        const st = loadStateFor(projectName);
+      function makeDashCard(projectObj, isActive){
+        const { id, name } = projectObj;
+        let st = null;
+        if(id === activeStateProjectId && activeState) {
+            st = activeState; 
+        } else {
+            st = loadStateForId(id);
+        }
+          
         const total = st?.totalPages ?? 0;
         const counts = st ? computeCounts(st) : Array(STAGES.length).fill(0);
         const done = counts[7] || 0;
@@ -706,140 +1073,189 @@
 
         const card = document.createElement('div');
         card.className = 'dashCard' + (isActive ? ' active' : '');
-        card.dataset.project = projectName;
+        card.dataset.projId = id;
 
-        const stageLine = STAGES
-          .filter(s => s.id !== 0)
-          .map(s => {
+        const dashTop = document.createElement('div');
+        dashTop.className = 'dashTop';
+        const dashTitle = document.createElement('div');
+        dashTitle.className = 'dashTitle';
+        dashTitle.title = name;
+        dashTitle.textContent = name;
+        const badge = document.createElement('div');
+        badge.className = 'badge';
+        badge.textContent = total ? total + 'P' : '未作成';
+        dashTop.appendChild(dashTitle);
+        dashTop.appendChild(badge);
+
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        const barInner = document.createElement('div');
+        barInner.style.width = p + '%';
+        bar.appendChild(barInner);
+
+        const dashNums = document.createElement('div');
+        dashNums.className = 'dashNums';
+        function createMini(dotVar, txt){
+            const m = document.createElement('div');
+            m.className = 'mini';
+            if(dotVar){
+                const d = document.createElement('span');
+                d.className = 'dot';
+                d.style.background = `var(${dotVar})`;
+                m.appendChild(d);
+            }
+            m.appendChild(document.createTextNode(txt));
+            return m;
+        }
+        dashNums.appendChild(createMini('--c7', `完${done}`));
+        dashNums.appendChild(createMini('--c8', `修${fixes}`));
+        dashNums.appendChild(createMini('--c0', `残${remain}`));
+        dashNums.appendChild(createMini(null, `${p}%`));
+
+        const stageLine = document.createElement('div');
+        stageLine.className = 'stageLine';
+        STAGES.filter(s => s.id !== 0).forEach(s => {
             const c = counts[s.id] || 0;
-            return `<div class="stageChip"><span class="dot" style="background:var(${s.cssVar})"></span><span class="txt">${s.name}</span> ${c}</div>`;
-          }).join('');
+            const chip = document.createElement('div');
+            chip.className = 'stageChip';
+            const dot = document.createElement('span');
+            dot.className = 'dot';
+            dot.style.background = `var(${s.cssVar})`;
+            const txt = document.createElement('span');
+            txt.className = 'txt';
+            txt.textContent = s.name;
+            chip.appendChild(dot);
+            chip.appendChild(txt);
+            chip.appendChild(document.createTextNode(' ' + c));
+            stageLine.appendChild(chip);
+        });
 
-        card.innerHTML = `
-          <div class="dashTop">
-            <div class="dashTitle" title="${escapeHtml(projectName)}">${escapeHtml(projectName)}</div>
-            <div class="badge">${total ? total + 'P' : '未作成'}</div>
-          </div>
-          <div class="bar"><div style="width:${p}%"></div></div>
-          <div class="dashNums">
-            <div class="mini"><span class="dot" style="background:var(--c7)"></span>完成 ${done}</div>
-            <div class="mini"><span class="dot" style="background:var(--c8)"></span>修正 ${fixes}</div>
-            <div class="mini"><span class="dot" style="background:var(--c0)"></span>残り ${remain}</div>
-            <div class="mini">進捗 ${p}%</div>
-          </div>
-          <div class="stageLine">${stageLine}</div>
-        `;
+        card.appendChild(dashTop);
+        card.appendChild(bar);
+        card.appendChild(dashNums);
+        card.appendChild(stageLine);
 
         card.addEventListener('click', ()=>{
-          els.projectKey.value = projectName;
-          const projs = loadProjects();
-          if (projs.includes(projectName)) els.projectSelect.value = projectName;
-          loadCurrentProject();
-          highlightDashboard();
+          flushSave(); 
+          els.projectSelect.value = id;
+          currentProjectId = id;
+          refreshMainView();
         });
-
         return card;
-      }
-
-      function highlightDashboard(){
-        const current = els.projectKey.value.trim();
-        Array.from(els.dash.children).forEach(el=>{
-          el.classList.toggle('active', el.dataset.project === current);
-        });
       }
 
       function refreshDashboard(){
         const projects = loadProjects();
-        const current = els.projectKey.value.trim();
         els.dash.innerHTML = '';
-        projects.forEach(name=>{
-          els.dash.appendChild(makeDashCard(name, name === current));
+        projects.forEach(p => {
+          const isActive = (p.id === currentProjectId);
+          els.dash.appendChild(makeDashCard(p, isActive));
         });
       }
 
-      // ----- Init -----
-      const projects = loadProjects();
-      rebuildProjectSelect(projects, projects[0]);
-      rebuildProjectConfigUI(projects);
+      function highlightDashboard(){
+        Array.from(els.dash.children).forEach(el => {
+          el.classList.toggle('active', el.dataset.projId === currentProjectId);
+        });
+      }
 
-      setGridCols();
-      loadCurrentProject();
-
-      // ----- Events -----
+      // --- Event Listeners ---
       els.projectSelect.addEventListener('change', ()=>{
-        els.projectKey.value = els.projectSelect.value;
-        loadCurrentProject();
-        highlightDashboard();
-      });
-
-      els.projectKey.addEventListener('change', ()=>{
-        const projs = loadProjects();
-        const v = els.projectKey.value.trim();
-        if (projs.includes(v)) els.projectSelect.value = v;
-        loadCurrentProject();
-        highlightDashboard();
+        flushSave(); 
+        currentProjectId = els.projectSelect.value;
+        refreshMainView();
       });
 
       els.buildBtn.addEventListener('click', buildFromInputs);
 
       els.setStageBtn.addEventListener('click', ()=>{
-        const st2 = loadState();
-        if (!st2){ say('先にページ数を入れて「作成/更新」を押してください。'); return; }
-        st2.stage = st2.stage.map(()=> selectedStageId);
-        saveState(st2);
-        render(st2);
-        refreshDashboard();
+        flushSave();
+        const st = loadCurrentState();
+        if (!st){ say('データがありません。'); return; }
+        st.stage = st.stage.map(()=> selectedStageId);
+        saveStateImmediate(currentProjectId, st); 
+        render(st);
+        scheduleDashboardUpdate();
       });
 
       els.clearBtn.addEventListener('click', ()=>{
-        const st2 = loadState();
-        if (!st2){ say('先にページ数を入れて「作成/更新」を押してください。'); return; }
-        st2.stage = st2.stage.map(()=> 0);
-        saveState(st2);
-        render(st2);
-        refreshDashboard();
+        flushSave();
+        const st = loadCurrentState();
+        if (!st){ say('データがありません。'); return; }
+        st.stage = st.stage.map(()=> 0);
+        saveStateImmediate(currentProjectId, st); 
+        render(st);
+        scheduleDashboardUpdate();
       });
 
       els.resetBtn.addEventListener('click', ()=>{
-        localStorage.removeItem(keyName());
-        els.grid.innerHTML = '';
-        els.stats.innerHTML = '';
-        renderLegend(null);
-        say('リセットしました。ページ数を入れて「作成/更新」を押してください。');
-        refreshDashboard();
+        flushSave();
+        if (!confirm('この作品の進捗データをリセットしますか？')) return;
+        localStorage.removeItem(storageKeyFor(currentProjectId));
+        localStorage.removeItem(backupKeyFor(currentProjectId));
+        
+        activeState = null;
+        activeCounts = null;
+        activeStateProjectId = null;
+        pendingSaveProjectId = null;
+        if(saveDebounceTimer) { clearTimeout(saveDebounceTimer); saveDebounceTimer = null; }
+
+        refreshMainView();
+        say('リセットしました。');
+      });
+
+      els.restoreBtn.addEventListener('click', ()=>{
+        flushSave();
+        if(!confirm('バックアップから復元しますか？')) return;
+        const backupKey = backupKeyFor(currentProjectId);
+        const raw = localStorage.getItem(backupKey);
+        if(!raw) { say('バックアップなし'); return; }
+        try {
+            const parsed = JSON.parse(raw);
+            if (!isPlausibleStateObj(parsed)) return;
+            const res = sanitizeState(parsed);
+            if(res.state) {
+                saveStateImmediate(currentProjectId, res.state, { skipBackup: true });
+                refreshMainView(); 
+                scheduleDashboardUpdate();
+                say('復元しました。');
+            }
+        } catch(e) { say('失敗:'+e); }
       });
 
       els.cols.addEventListener('change', setGridCols);
-
-      // 登録名編集 → 保存
+      els.addProjectBtn.addEventListener('click', handleAddProject);
+      
       els.saveProjectsBtn.addEventListener('click', ()=>{
-        const inputs = Array.from(els.cfgGrid.querySelectorAll('input[data-proj-idx]'));
-        const arr = inputs
-          .sort((a,b)=> Number(a.dataset.projIdx) - Number(b.dataset.projIdx))
-          .map(i => i.value.trim());
-        const saved = saveProjects(arr);
-        const current = els.projectKey.value.trim();
-        rebuildProjectSelect(saved, saved.includes(current) ? current : saved[0]);
-        rebuildProjectConfigUI(saved);
-        cfgSay('保存しました。ダッシュボード/プルダウンが更新されます。');
-        refreshDashboard();
-        highlightDashboard();
+        const currentList = getCurrentConfigNames();
+        const saved = saveProjects(currentList);
+        updateAllUI(saved);
+        cfgSay('登録名を保存しました。');
       });
 
       els.resetProjectsBtn.addEventListener('click', ()=>{
-        localStorage.removeItem(PROJECTS_KEY);
-        const def = loadProjects();
-        rebuildProjectSelect(def, def[0]);
-        rebuildProjectConfigUI(def);
-        cfgSay('登録名を初期化しました（進捗は残っています）。');
-        loadCurrentProject();
-        refreshDashboard();
-        highlightDashboard();
+        if(!confirm('リストを初期状態（4件）に戻しますか？')) return;
+        localStorage.removeItem(PROJECTS_KEY_V2);
+        localStorage.removeItem(MIGRATE_FLAG_KEY);
+        const list = loadProjects(); 
+        updateAllUI(list);
+        cfgSay('リストを初期化しました。');
       });
 
-      // 初回ダッシュ描画
-      refreshDashboard();
-      highlightDashboard();
+      // 【安全対策】離脱時フラッシュ
+      window.addEventListener('pagehide', () => { flushSave(); }, { capture: true });
+      document.addEventListener('visibilitychange', () => {
+        if (document.visibilityState === 'hidden') flushSave();
+      }, { capture: true });
+      window.addEventListener('beforeunload', () => { flushSave(); });
+
+      // --- Init ---
+      const projects = loadProjects();
+      if (!projects.some(p => p.id === currentProjectId)) {
+        currentProjectId = projects[0].id;
+      }
+      updateAllUI(projects);
+      setGridCols();
 
     })();
   </script>
